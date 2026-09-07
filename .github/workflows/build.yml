@@ -1,11 +1,7 @@
 name: Build-Linux
 
 on:
-  push:
-    paths-ignore:
-      - 'doc/**'
-      - '**.md'
-      - '**.rst'
+  workflow_dispatch: 
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -107,56 +103,56 @@ jobs:
           docker exec -w /home/wrench/wrench/build/wrench-init-generated-simulator/build wrench cmake ..
           docker exec -w /home/wrench/wrench/build/wrench-init-generated-simulator/build wrench make
 
-      - name: Documentation Build and Deployment
-        env:
-          DIST: ${{ matrix.DIST }}
-          COMPILER: ${{ matrix.COMPILER }}
-          batsched: ${{ matrix.batsched }}
-          TOKEN_GITHUB: ${{ secrets.TOKEN_GITHUB }}
-        run: |
-          if [[ "$DIST" == "ubuntu-noble" && "$COMPILER" == "gcc13" && "$batsched" == "off" ]]; then
-            docker exec -w /home/wrench/wrench/build wrench cmake -DENABLE_BATSCHED=${batsched} -DCMAKE_VERBOSE_MAKEFILE=ON ..;
-            docker exec -w /home/wrench/wrench/build wrench make doc;
-            docker cp wrench:/home/wrench/wrench/docs .;
-            cp -R ./docs/build $HOME/gh-pages-to-deploy;
-            echo "Starting to update gh-pages"
-            #copy data we're interested in to other place
-            git config --global user.email "actions@github.com"
-            git config --global user.name "GitHub Actions"
-            #using token clone gh-pages branch
-            git clone --quiet --branch=gh-pages https://${TOKEN_GITHUB}@github.com/wrench-project/wrench.git gh-pages > /dev/null;
-            #go into directory and copy data we're interested in to that directory
-            cd gh-pages;
-            cp -Rf $HOME/gh-pages-to-deploy/* .;
-            touch .nojekyll;
-            #add, commit and push files
-            git add -f .;
-            git diff-index --quiet HEAD || git commit -m "GitHub build $GITHUB_RUN_NUMBER";
-            git push -fq origin gh-pages > /dev/null;
-            echo "Done updating gh-pages.";
-          fi
+      # - name: Documentation Build and Deployment
+      #   env:
+      #     DIST: ${{ matrix.DIST }}
+      #     COMPILER: ${{ matrix.COMPILER }}
+      #     batsched: ${{ matrix.batsched }}
+      #     TOKEN_GITHUB: ${{ secrets.TOKEN_GITHUB }}
+      #   run: |
+      #     if [[ "$DIST" == "ubuntu-noble" && "$COMPILER" == "gcc13" && "$batsched" == "off" ]]; then
+      #       docker exec -w /home/wrench/wrench/build wrench cmake -DENABLE_BATSCHED=${batsched} -DCMAKE_VERBOSE_MAKEFILE=ON ..;
+      #       docker exec -w /home/wrench/wrench/build wrench make doc;
+      #       docker cp wrench:/home/wrench/wrench/docs .;
+      #       cp -R ./docs/build $HOME/gh-pages-to-deploy;
+      #       echo "Starting to update gh-pages"
+      #       #copy data we're interested in to other place
+      #       git config --global user.email "actions@github.com"
+      #       git config --global user.name "GitHub Actions"
+      #       #using token clone gh-pages branch
+      #       git clone --quiet --branch=gh-pages https://${TOKEN_GITHUB}@github.com/wrench-project/wrench.git gh-pages > /dev/null;
+      #       #go into directory and copy data we're interested in to that directory
+      #       cd gh-pages;
+      #       cp -Rf $HOME/gh-pages-to-deploy/* .;
+      #       touch .nojekyll;
+      #       #add, commit and push files
+      #       git add -f .;
+      #       git diff-index --quiet HEAD || git commit -m "GitHub build $GITHUB_RUN_NUMBER";
+      #       git push -fq origin gh-pages > /dev/null;
+      #       echo "Done updating gh-pages.";
+      #     fi
 
-      - name: Code Coverage
-        env:
-          DIST: ${{ matrix.DIST }}
-          COMPILER: ${{ matrix.COMPILER }}
-          batsched: ${{ matrix.batsched }}
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-        run: |
-          if [[ "$DIST" == "ubuntu-noble" && "$COMPILER" == "gcc13" && "$batsched" == "off" ]]; then
-            docker exec -w /home/wrench/wrench/build wrench lcov --ignore-errors mismatch,mismatch --ignore-errors gcov,gcov --directory . --capture --output-file coverage.info;
-            docker exec -w /home/wrench/wrench/build wrench lcov --remove coverage.info --ignore-errors unused,unused '*/test/*' '*/examples/*' '*/include/*' --output-file coverage.info;
-            docker cp wrench:/home/wrench/wrench/build/coverage.info .;
-            bash <(curl -s https://codecov.io/bash) -f coverage.info -t ${CODECOV_TOKEN};
-          fi
+      # - name: Code Coverage
+      #   env:
+      #     DIST: ${{ matrix.DIST }}
+      #     COMPILER: ${{ matrix.COMPILER }}
+      #     batsched: ${{ matrix.batsched }}
+      #     CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      #   run: |
+      #     if [[ "$DIST" == "ubuntu-noble" && "$COMPILER" == "gcc13" && "$batsched" == "off" ]]; then
+      #       docker exec -w /home/wrench/wrench/build wrench lcov --ignore-errors mismatch,mismatch --ignore-errors gcov,gcov --directory . --capture --output-file coverage.info;
+      #       docker exec -w /home/wrench/wrench/build wrench lcov --remove coverage.info --ignore-errors unused,unused '*/test/*' '*/examples/*' '*/include/*' --output-file coverage.info;
+      #       docker cp wrench:/home/wrench/wrench/build/coverage.info .;
+      #       bash <(curl -s https://codecov.io/bash) -f coverage.info -t ${CODECOV_TOKEN};
+      #     fi
 
-      - name: Slack Notification
-        uses: rtCamp/action-slack-notify@v2
-        env:
-          SLACK_CHANNEL: github
-          SLACK_ICON: https://github.com/wrench-project.png?size=48
-          SLACK_USERNAME: wrench-builds
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-          MSG_MINIMAL: ref,actions url, commit
-          SLACK_TITLE: Build ${{ matrix.build }}
-          SLACK_FOOTER: ''
+      # - name: Slack Notification
+      #   uses: rtCamp/action-slack-notify@v2
+      #   env:
+      #     SLACK_CHANNEL: github
+      #     SLACK_ICON: https://github.com/wrench-project.png?size=48
+      #     SLACK_USERNAME: wrench-builds
+      #     SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+      #     MSG_MINIMAL: ref,actions url, commit
+      #     SLACK_TITLE: Build ${{ matrix.build }}
+      #     SLACK_FOOTER: ''
